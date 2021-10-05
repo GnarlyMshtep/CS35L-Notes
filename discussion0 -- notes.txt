@@ -1,0 +1,82 @@
+bin(ary) -- executable 
+home -- houses users
+
+### COMMANDS: 
+The command of all commands: **man**(ual) *cmd*
+
+
+pwd             :show current directory
+mkdir *dirName* : make a directory by that name in this location
+cd *dir*        : change directory to *dir*
+cd ..           : go up a directory level
+ls              : list all fils in current directory -- can use with arguments to find a file or directory
+    *flags*: to sort by file size, etc, etc. 
+touch *filename*: create a file by the name
+cp *file1* *file2*: copy file 1 to file 2
+mv              : move in some config I have yet to understand
+{head,tail} *file*     : show first and last lines of file
+alis *name* = *PATH*   : link a command with a specific place (may be a mac thing) 
+which *thing*               : the path to a certain place
+chmod                   : changes premissions. 
+find                    : a recursive (depth first) search command
+clear               : clear the terminal 
+cat                 : concatnatae to std output 
+1 angled bracket > --- overwrite 
+2 angled bracket >> -- concatanate 
+"something" -- take it literally, for example /n does not create a line break
+file extensions are to help the OS understand what the file is, but you name it doesn't matter too mach. 
+
+rm -r foobar -- foobar is a directory and that is a recursive remove. 
+
+
+~ the outermost 
+echo "woo
+
+
+**:** is the delimeter defullt to bash  
+
+
+###### IO
+
+cmd < file      : input cmd from file
+cmd >> file     : append
+
+the rest works how u thing, with the arrow pointing where you want to direct. 
+PATH= ""
+executable search path -- tells the computer where to look for executable files, in other directories you are not in.
+$HOME
+$SHELL
+export NAME=value 
+
+###### 
+
+
+
+###### File Premmisions
+Each file has certain premissions, which are combinations of r, w, and x premission, represented by a 3 bit integer (8 combos) 
+*chmod* -- change mode -- can be used. 
+    EX: chmod -w foobar.txt
+
+
+------------
+
+### Emacs 
+Many keyboard shortcuts to do all what you want, ussuly use ctrlX + ctrl*Something*
+>do emacs tutorial. 
+ctrl h and i. 
+on slides there are many diffrent commands. 
+*make your own cheat sheet*
+
+
+
+### Questions
+ -  what does the *export* keyword do? --- if we don't use it, the OS treats the PATH= (or whatever) as it's own event and won't save it to the global state. 
+ - 
+
+ ----------
+ ----------
+ ----------
+ 
+
+ ### Assigment #1
+ 
