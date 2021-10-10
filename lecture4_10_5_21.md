@@ -45,6 +45,25 @@ To see this byte compile `M-x byte-compile dist.el RET` -- compiles and shows on
 - Half-way between 2 and 4. *just-in-time compilation* (JIT) compile to machine code at run-time. Could be done from byte code, code directly, etc. Done in browser for JS, from source to machine code. Coming to emacs soon.
 - Compile to machine code -- no machine independent. `ek foo.el` to compile lisp. 3 is not as fast, even after compiling. Can take it's "sweet time" to generate really good machine code 
 
+### Lisp Syntax stuff
+(global-set-key "@" 'what-cursor-position) --> correspond @ to the command what-cursor-position. 
+' is how you quote something in lisp. 
+
+To undo, (global-set-key "@" 'self-insert-command) -- bound the @ character to the self insert command which is the regular command everything is bound to. 
+
+```language='lisp'
+(defun function middle-of-buffer (&optional arg) 
+  "Move point to the middle of the current buffer -- a function's docstring"
+  (interactive "P")
+  (goto-char (/  (+ (point-min) (point-max)) 2) 
+
+middle-of-buffer
+
+
+
+
+```
+
 
 ### Random Stuff (mostly commands)
  - ESC SHIFT-1 = M-!:  run shell command
@@ -59,5 +78,15 @@ To see this byte compile `M-x byte-compile dist.el RET` -- compiles and shows on
 - `(kill-buffer "*buffername*"`)
 - `(list-buffers)`
 - `elc`: file extension for emacs-lisp-bytecode. 
+- `M-:` drop into lisp execution mode in the buffer. 
+- `C-h f`: find command.  
+- `C-x =`: What cursor position shortcut. 
+- `C-q` quote the next charecter and don't do any of the fancy global variable stuff. 
+- `kbd` creates the commads from what you wrote ( `kbd "C-x C-\\" returns "^X^\")
+- `M-x` **debug-on-entry** commands: 
+    - `c`: continue (go through the entire tree not line by line)
+    - `d`: descend a level in (a lot of details -- way too much details) 
+    - `e`: evaluate (know some property of the current function I'm debugging) For example,  `e arg` -- evaluate whatever code you want. 
+    - `C-j` exit that debugging session.
 ### Questions
 - what's `sed`? 
