@@ -108,10 +108,9 @@ what you type is depended on the modes you are in.
 
 ### Questions 
 1. how are directories and files differ? How are they the same? etc, whats the diffrence
-2. role of initial /
+2. role of initial / --its the relative vs 
 3. floyds slow and fast pointers
-4. the first 3 bits 
-5. what is `od` again? 
+4. the first 3 bits *eh, fine for now*
+5. what is `od` again? -- writes out the file in octal, stands for octal dump
 6. `man emacs client`
-7. are directories files
-
+7. are directories files -- https://askubuntu.com/questions/1073802/what-are-directories-if-everything-on-linux-is-a-file

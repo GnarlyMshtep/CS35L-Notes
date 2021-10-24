@@ -1,7 +1,7 @@
 Today: 
-     - POSIX File System 
-     - POSIX Shell 
-     - EMACS
+- POSIX File System 
+- POSIX Shell 
+- EMACS
 
 been around for a while, and may remian because it's a core building block
 
@@ -52,8 +52,9 @@ every directory has 2 special entries
     from EMACS, pnly the ps command and bash 
 5. `fg` resume the last commands  
 6. `type` sort of like `which`, just throught the hash table, can recognize when something is a builtin 
-### EMACS
+7. `pwd` stands for present working directory!
 
+### EMACS
 3. double vs. double can have fancy expressions, single -- what u see is what u get. 
 4. `C-x o` other buffer
 5. `C-x C-b` list buffer
@@ -76,7 +77,7 @@ every directory has 2 special entries
 21. `M-q` buetify/indent/reformat 
 22. `ln rm mv` don't actually delete the files, just shuffle the pointers around. 
     so `rm` only removes the name for the file 
-    ` (rm p; sleep 3; tail -n 2)<p -- read from a file that has been removed -- 
+    ` (rm p; sleep 3; tail -n 2)< p -- read from a file that has been removed -- 
 23. `sleep SECONDS` wait for 10 seconds 
 24 `shred NAME` repeatedly overwrites the file and then removes the file (think about it! ussuly stuff is in disk   ) 
 

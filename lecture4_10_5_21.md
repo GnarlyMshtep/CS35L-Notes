@@ -35,7 +35,7 @@ So, what does `C-j` do?
 
 So how do we make it faster? 
 
-    *Byte-code interperter*: instaed of translating into a data structure, we do something smaller and more interpertable. Stack operations instead of a tree. Fetch a byte, do a switch statement to understadn what it does, do it, go onto the next byte, quicker because we don't need the pointers. 
+*Byte-code interperter*: instaed of translating into a data structure, we do something smaller and more interpertable. Stack operations instead of a tree. Fetch a byte, do a switch statement to understadn what it does, do it, go onto the next byte, quicker because we don't need the pointers. 
 
 To see this byte compile `M-x byte-compile dist.el RET` -- compiles and shows on buffer. Like java, we are *machine independent*, which is a HUGE advantage. 
 
@@ -89,4 +89,4 @@ middle-of-buffer
     - `e`: evaluate (know some property of the current function I'm debugging) For example,  `e arg` -- evaluate whatever code you want. 
     - `C-j` exit that debugging session.
 ### Questions
-- what's `sed`? 
+- what's `sed`? -- stream editior, makes one pass through stdin and does all sorts of basic text transformations, complex ass man page.

@@ -40,7 +40,7 @@ Uses ordinary characters to stand for themselves (all [:alpha:] and [:numeric:])
 - `[abcd]` this is a set, either one of these 4 characters
 - [a-z] accepts character ranges (what if u wanted to use [+-*]? [+*/-])
 - [^a-zA-Z] negate a character set, all but those  character -- special charecter only at the start
-- [[a][^]a] -- anything not a and not square bracket
+- ^[^a\[\]]*$ -- anything not a and not square bracket
 More recently, to deal with Unicode being huge [[:alpha:]]
 - [][] match the open and close square brackets
 - `^` line start
