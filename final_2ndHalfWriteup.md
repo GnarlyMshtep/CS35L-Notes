@@ -1,4 +1,3 @@
-
 # Git 
 
 ### What does git do?
@@ -214,7 +213,57 @@ C is the lowest level software tools (programming language) that runs everywhere
 
 C++ was originally a C compiler. C++ implements all those features using low level tricks on C. 
 
-##  Compilation in C (some GCC, but the focus is on C iteslf - see full `#` gcc section)
+
+
+## Misc 
+Can have pointer to functions, apperantly, I didn't know that. The syntax is horrible, but you can do it and clean it up with typdef. (less of a need in C++ because can use all those extra machinery).
+
+
+### `Static` keyword (not in a class's context -- there are none)
+create a foo.c file with a static function `f`. No other file can call `f`, another file can have it's own `f`. C does that in the compilation.  
+
+
+### Exception Handling 
+The idea is to make the code readable on the usual case, where exception happens only rarely. 
+
+Complaints: also helps the bad guys figure out what may go wrong. Eggert claims the except block tends to be ridden with error. 
+
+```c++
+try{
+    x = f(y)
+    return g(x)
+}catch(...){
+    //do error thing
+}
+```
+altarnative without using exceptions: 
+
+```c++
+x=f(y)
+if(x==EOF){
+    return -3
+}
+```
+
+### `Generic` in C 
+a statement that behaves diffrently dependign on the type of the object passed in 
+```c++
+return _Generic(E,
+                float: 1,
+                long: 2,
+                defualt: 1)
+``` 
+
+Often used in macros (there's supposudly an `abs()` example somehwere). 
+### C, programmign std (atomic access) RETURN TO THIS, WHAT AM I TRYING TO SAY? 
+Run on the bare minimum, no OS is needed. C offers atomic acsess, usefull for threading. 
+
+POSIX, is the OS std that ca
+
+# Compilation, particularly with gcc with respect to C
+
+
+##  Compilation in C (some GCC specifics)
 
 
 ### Steps of compilation
@@ -265,8 +314,165 @@ When we build, .md helps compile your target
 
 ABI (OS specifications) is one of the things in the .md files, details on, for example "How do you do a function call in this system?? which is needed since Microsoft and Linux don't agree on ABI (calls with more than 6 args, remmeber?) -- so .md are also OS dependent, not only architecture. 
 
+
+
+
+## GCC compiler options and program optimization using compilers (both speed and security)
+selecting a different subset of flags changes the envieroment and may expose (or mask) bugs in your code. 
+
+## Security/Correctness optimization using compiler
+Low level langs have a high security bugs on how to break into C/C++ programs. Security doesn't only mean that we don't get attacked, but also that unexpected things do not happen. 
+*stack overflow attack is an example* **return to learn what the stack overflow attack is**
+
+### Example: Stack overflow attack and it's solution the `-f-stack-protect`
+somwhat less efficient, but does checks
+    
+    What GCC will do is make our arrays larger at the begining of the begining of the stack. Puts canary at the begining of the stack.
+    `int canary = R (some random value)`
+    just before we return make sure that the canary is equal to R. Now attacker needs to make sure it finds the canary with R. 
+    if index over the canary.
+
+    Turn off with `-fno-stack-protector`
+    (controversial)
+
+### CheckType1: Static Checks
+Static checks are the one's that the compiler does at compile time, they make your program more reliable. They are challenging for the compiler since it doesn't know what is the value of any variables and which specific execution path is taken (where an exhustive search is infiesable), so it will have to use heauristic. As such, it has the follwing up/downsides
+- `+` zero runtime cost 
+- `-` slow down compialtion 
+- `+` some errors (such as derefrencing a null ptr) can only happen and can only be caught at runtime
+- `-` less precise than runtime checks. 
+
+#### StaticCheckType1: Intrusive static checking
+Diffrent ways to tell the compiler -- check this while compiling. Intrusive because you have to change your code. Makes a lot of since because we have knowledge about the execution (and expected execution) of our code that the compiler does not, and if we were to communicate that with it, it will be able to act more intelligably. Eliminates the need for runtime checks (see ex) Another + is that it's a great way to document our assumptions (see example). 
+
+The std way `__static_assert(C)` where C is any condition but something you can eval at compile time, for example: 
+
+```c++
+__static_assert(EOF==-1); //make sure that EOF is what we assume. Also documents the assumption we made. it's faster, than something if-else check (and only happens at compile time). Spelled this way in C2x (next version of c std). in current version of C: 
+_static_assert(C,"ouch");
+static_assert(C) //in C++
+
+/*some code assume EOF == -1, this is always true on linux, maybe not always elsewhere*/
+```
+
+
+
+#### Non intrusive static checkking 
+Are ones that you don't need to change your code for. 
+
+`gcc -Wall` -W is common, `-Wall` says turn on ALL (the warnings that the gcc guys though were useful enough often enough) the warnings. 
+
+Exampes of specific flags:
+- `-Wcomment`, a comment not always properly closed such as `/* x2 /* Y */`, which is technically valid, but perhaps wrong on context (undefined behivor)
+- `-Wparntheses` for arithmatic expressions such as: `a\<\<b+c`. Do we take `a` into `b` first or add first? Another example is `a & b| c`. Both these cases have actual answers (for example, or actually has priority), but the gcc compiler guys think there's a good chance that you don't know it and goofed up. 
+- `-Waddress` Lets you kwow when comparing address with pointer such as str == "doc" where str is `char *`, again, here gcc estimates that you didn't mean to do that and are messign up.
+- `Wstrict-aliasing` is a contreversial example seeing that Linux Kernal devs use these tricks all the time. As it says it makes you dereference very strictly, where without it we can do all sorts of mem tricks (look at only last 32 bits on purpose, set the last 3 bit to type code, etc). 
+```c++
+long l = 27;
+int *p = (int *)&l; //pretend 64 bit qunatity is 32
+return *p
+//return value depends on endiness of machine 
+```
+
+Note that *warning does mean that your program is worng!* (and it'll still compile). When you get such a warning you can either adjust your code or turning warning of with `-Wno-parentheses` or address, etc.  
+
+
+## Preformence (mainly speed) optimization using compiler
+Q: Optimize for what? You can optimize for different things (memory usage, readability, debugability,speed, we already discussed security). `-o` is bland optimization that is useful for all and nonoffensive. 
+Why not optimize by defualt if it is so nonconversial? gcc runtime costs.
+
+
+### Non-intrusive preformece optimisations with `gcc -o` and friends
+build speed and optimisation level are inversly correlated. During dev, we might not care about optimization as much as gccs runtime, particularly on large projects which may take mins-hrs to compile.  
+
+#### Levels for optimisation for time (levels)*: 
+1. `gcc -o2` -- Eggert's sweet spot
+2. `gcc -oN` for N increasing
+
+The more optimized the less debugable since it becomes less predictable. These opmisations are not supposed to introduce bugs (although they may certainely expose them), but again, less reliable and more unexpected the more you optimise. At a certain point, gcc can't optimize anymore, no matter how high N is. (even -o3 has been documented unreliable and not always as good as o2)  
+
+#### Optimzation for space*: 
+1. `gcc -os` optimize for space
+
+Important for embedded devices
+
+#### Other varient of optimisation
+1. `gcc -og` optimize for debuggability (with some speed involved as well -- many optimizations make really confusing machine code (for example, GCC may choose to not put a backtrace on where the current stack frame came from, if it thinks it won't return)
+2. `gcc -o0` no optimizations (perhaps less optimizations than regular)
+3. `gccc -fltc`: link-time optimization (not optimizing the link time, but the code).
+        What does it do? Instead of compiling all *.o to optimized machine code, it writes it to a high level description. Then As such, instead of optimising with respect to each .o file it optimises with respect to entire codebase. `lto` the link time optimizer, takes a long time.   
+
+### Intrusive preformence optimzation
+intrusive = gotta change your src code. Tell your compiler how your program runs (now with speed instead security -- failchecking)
+
+#### `__atribute__` for function optimization:
+giving pragramtic preformence advice to compiler. *(non portable -- many of these commands are recognized only by gcc compiler)* to make portable (cancelling the optimization for other compilers bu tallowing them to compile) use:
+```c++
+# if ! __GNUC__
+    # define __atribute__(x)
+#endif
+//If not GCC, make attribute a macro that expends to nothing, that doesn't affect compilation of that code
+```
+Here are some examples of such optimisations: 
+
+- the cold/hot attribs:
+    ```c++
+    void abort(void) __atribute__(({cold,hot})) // indicate if its (un)likely will call abort (unlikely in this case, we call it once!)
+    //can put code for calls far away to not waste valueable cache space
+- no return 
+    ```c++
+    __attribute__((noreturn)) //abort never returns as in, like not a value, but to return out of it. (can just jump to it, but never need to put it's return value on the stack)
+    //so popular it was standardized in C, and can be written:  
+    _Noreturn void abort(void)//... 
+    ```
+
+#### `__atribute__` for data optimization optimization:
+*optimising type request:* A common thing to do is ask what object type are we pointing to. A slow thing to do is to derefrence the pointer, and go to the object where the first word is type. Now, every time we just need type we get the entire object, which is wastefull.
+
+Alternatively, we can use the last 3 bits of the pointer from pointer to tell us what the type. The last type is "other." (doesn't pullote the cache). The example did that 
+```c++
+(long) p* = //something 
+//we tag by adding 3, and when we need to derefrence we untag. 
+// works if we can assume that the last 3 bits are 0, for which we need to allign (since mem adresses don't go to 64 we can assume that)
+//then to get back type:
+(char*)((long) p & ~7) to undo the last 3 bits
+//!okay this is actually kinda beatifull!
+```
+
+Another example is alligning variables (remember this is important and faster from assembly). 
+```c++
+#define SIZE __attriute__((aligned(8)))
+char arr[SIZE]
+// compute stuff into arr if(strcmp(arr,"ABC")==0)
+// make sure that things are on a multiple 8 -- faster comparison 
+char *p = &a[0];
+long l = (long) p;
+long tagged_l = l+3; //(to create a type of 61 bit val and 3 bit tag)
+```
+
+#### speed optimization `__builtin_unreachable()`
+The `__builtin_unreachable()` tells the compiler that the function tagged `__builtin_unreachable()` will never be called . What's is it for then? Any call to this function is a message from the program to the compiler that this line cannot be reached, giving the compiler advice that this part of the program must not run. Example: 
+
+```c++
+#define assume(x) ((x) ? (void)0 : __builtin_unreachable())
+//lets us tag an x s.t compiler can assume that it is true. 
+int g(int n){assume(n>=0); return n +n/2;} 
+// code generated is now faster since the compiler can do faster arithmatic operations that only work for positive n   
+
+//could make a function, but worse 
+static void assume(int x){ if(!x) :__builtin_unreachable}
+//macro is better, works for all types. 
+//(void)0 is a something that doesn't return, so you don't asy if(assume(x)). 
+//not generating any machine instructions, just telling the compiler that it can assume this. It wouldn't make any __builtin_unreahable calls.
+```
+
+### Smart pre-optimising: Program Profiling 
+Look for hotspots in your program (statements/funcitons that get executed a lot). Then, use outside knowldge (say, in algorithms) to optimize the code as fast as much as you can. Allows you to focus on the essence when optimising. Can optimise then profile again. Has a potential for larger optimisations since radically changeing the src where it matters most.  
+
+`gcc -coverage foo.c` count the number of times each statement gets executed. (Not as slow as you think because can only count the function entrences and exists and conditional branchings.) Outputs on a bunch of binary files. use `gcov` to analyze that. 
+
+
 ## Misc 
-Can have pointer to functions, apperantly, I didn't know that. The syntax is horrible, but you can do it and clean it up with typdef. (less of a need in C++ because can use all those extra machinery).
 
 ### Just in Time compilation using gcc
 JIT interface for GCC (libgcijit) -- *gcc as a subroutine*
@@ -278,52 +484,23 @@ mc(someSrc)
 ```
 (literally compiling strings to code, in runtime, and running it -- keep the danger in mind)
 
-### `Static` keyword (not in a class's context -- there are none)
-create a foo.c file with a static function `f`. No other file can call `f`, another file can have it's own `f`. C does that in the compilation.  
-
-
-### Exception Handling 
-The idea is to make the code readable on the usual case, where exception happens only rarely. 
-
-Complaints: also helps the bad guys figure out what may go wrong. Eggert claims the except block tends to be ridden with error. 
-
-```c++
-try{
-    x = f(y)
-    return g(x)
-}catch(...){
-    //do error thing
-}
-```
-altarnative without using exceptions: 
-
-```c++
-x=f(y)
-if(x==EOF){
-    return -3
-}
-```
-
-### `Generic` in C 
-a statement that behaves diffrently dependign on the type of the object passed in 
-```c++
-return _Generic(E,
-                float: 1,
-                long: 2,
-                defualt: 1)
-``` 
-
-Often used in macros (there's supposudly an `abs()` example somehwere). 
-### C, programmign std (atomic access) RETURN TO THIS, WHAT AM I TRYING TO SAY? 
-Run on the bare minimum, no OS is needed. C offers atomic acsess, usefull for threading. 
-
-POSIX, is the OS std that ca
-
-# GCC
-
 ### GCC: working with different languages
 .c,.cpp,.java,... gcc can compile different languages (different language frontends)
 
 1. Parsers generate rees isns a standard GENERIC data structure
 2. GCC-specific phashe (GIMPLE-form), 3 address representation EX: MULT(b,c,t_1), higher level instructions that you can compile into more specific instructions (GIMPLIFICATION)
 3. Translate GIMPLE into SSA (single static assignment) -- only assign to local variable. have body of loops get created and get pulled out of context. loop unrolling (if possible, doesn't have to implement i each time). *yah idk what this stage does*
+
+
+## Example of the unexpected results of optimization
+```c++
+int n = INT_MAX;
+int p = n+1;
+if (p < n ){
+    return -1;
+}
+```
+
+The compiler will assume p>n and optimize and our check for integer overflow will fail. This is technically our fault since behivor on integer overflow is undefined, but without optimisatrion, it may have checked. 
+
+
