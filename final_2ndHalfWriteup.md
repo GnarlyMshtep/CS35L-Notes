@@ -348,6 +348,76 @@ Hooks are certain scripts that git can run when certain actions take place. In `
 
 
 
+## git internals
+Git plumbing vs porcelin (low vs high level), we want to build high level ontop of the low-level and understanding it helps. 
+
+Notice the overall theme: .git wants to hide and be unobstrusive to our project. 
+
+### The folders & files inside .git
+
+#### .git/branches/
+I think, but couldn't find anything about it, that it's an old folder there for backwards compatibality. Ussuly branche head ptrs are stored at `.git/refs/heads`, where there's a file for each head that says it's commit id (and that's it).
+
+#### .git/config/
+config -- repository-specific-configuration 
+[category]
+    key = value 
+
+Easy to mess up if you go editing on your own, should use git commands to do it. Stores things such as 
+
+Example: 
+
+```
+[remote "origin"]
+        url = https://github.com/GnarlyMshtep/CS35L-Notes.git
+        fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+        remote = origin
+        merge = refs/heads/main
+```
+
+#### .git/decription
+for gitWeb. Some people like to give names to everything 
+
+#### .git/HEAD 
+ex: `ref: refs/heads/main`
+
+When your working, you want to be working relative to somewhere in your repository. That will be the place that what's in your staging area is compred to compare what you got to what's in there." 
+
+#### .git/gitk.chache
+caches git info in a gitk friendly format for prior use. Happens after you use gitk.
+
+#### .git/hooks/ -- event handlers
+Have written about this elsewhere, but these hooks are scripts that get executed as a response to a certain action happening in the repository. The folder, by defualt, contains example scripts. 
+
+*git pull also uses the lazy copying*
+
+#### .git/index
+A binary file which represnets your staging area. (all the changes that you plan to make in your next version)
+
+#### .git/info/exclude -- a private .gitignore
+patterns of filenames that you want git to pay no attention to. (why and additional one to .gitignore). Because this one is not shared by other people, it's not part of the history -- only for you
+
+#### .git/logs -- a chache
+A cache of recent changes to stuff
+
+HEAD -- log of when and how head was created and moved about, a cache of the last git-things you have done. There also are `/refs` which conatins both heads and remotes, containing branches and the last thing done to them 
+
+#### ./objects 
+The big gurrila of git. A bunch of subdirectories with /`dig``dig` to give it better searchabillity and smaller size for the repo on itself.  Each one of those is the full information for a commit.
+
+#### packed-refs
+an optimization of refs -- the tips of all the branches and tags. 
+
+##### What's in these objects? 
+We have been seeing POSIX filesystem so far. tree of files and directories. Make a tree for each edit is one design that is bad. Wer'e building a different kinda filesystem ontop of POSIX that is optimized for version control. The git objects system is implemented atop POSIX but not in a direct 1:1 (a single src does not go into a single object file). Still - we reuse/adapt many ideas. 
+
+Types of objects: blobs(reg file) tree(dir) commits(symlink). Tree maps names to objects. Premission over here as well. Difference: You can change file contents, but in git you cannot change file contents -- they are all immutable -- you are tryna record history -- it shouldn't be allowed to change. (a lot of optimisations accesible) 
+
+### Aside: building from a git clone
+As we discuss, we try to keep a minimal file content (only nogenrable src), where minimal satisfies maintence. There's that whole tradeoff. 
+
+Autogen.sh (bootstrap a process). 
 
 # C, the languge, not it's compilation
 C is the lowest level software tools (programming language) that runs everywhere. Created by Ken Thompson and Dennis ritchie in the mid 70's at Bell labs. 
@@ -654,3 +724,61 @@ if (p < n ){
 The compiler will assume p>n and optimize and our check for integer overflow will fail. This is technically our fault since behivor on integer overflow is undefined, but without optimisatrion, it may have checked. 
 
 
+
+
+# Encoding + Compression 
+Taking some data, preserving the same semantic information content but representing it with less charecters (bytes). Information Theory gives the rigourous limits/ideas behind this task, but we'll just focus on some practicallity. 
+
+When we compress data, we encode it in a more efficient way. 
+## Compression techniques
+
+
+### Huffman coding
+You want to compress. Input is divided into symbols from a finite alphabet $\Sigma{}$. Represent textual input in more precise way. We use the whole unique prefix shananigan thing to encode AAAAAAAUGH into $0000000010010111011$, which does save us many bytes. 
+
+The problem set up is we get charecters $c_1,...c_n$ with frequences $f_1,...,f_n$ in our data. Come up with a good set of bit strings to encode each charecter. Huffman proved the optimal strategy to come up with the best possible way using a binary tree which resents the encoding, where, taking a different prespective to look at the situation, we want the average traversal to have minimum depth of search. 
+
+how to: 
+1. take the least used chars and put them at the bottom of the tree. Fake-abstract them into a single charecter with their combined frequeces. 
+2. Play the same game again, where we consider the combined charecters to be 1 charecter and continue combining subtrees.  
+
+That's assuming that we know the frequency table a-priory. What if we don't?
+
+
+#### Huffman coding no apriory frequencyies: static approach
+Note that in some situations we can just assume an apriori frequency table. That is, if we have an english text we can use a table found to match in general for english text. Not the optimum but good approx and saves trouble.  
+
+The easiest approach is to scan over the entire text to be encoded, generate the frequency table, (possible communicate it to whoever might need to decode). 
+
+- `-` two passes over the input (first to find frequencies and then generate encoding).
+- `+` generates a provably more optimal encoding then the dynamic option.
+- `-` must store (and have) frequency table to decode.
+As such, we might do something like this when we have a lot of data we really care about being compressed well. 
+
+#### Huffman coding no apriory frequencyies: Dynamic approach
+Compressor initially assuming all symbols are equally likely. After the first symbol we have a modified frequency table, where that symbol has higher frequency **is it one? that doesn't make much sense**. As we encode the frequency table becomes better, and so does our encoding. A decoder plays the same game and updates it's frequency table as it goes along to decrypt with accordance to compressor.
+
+
+### Dictionary coding
+Assign an output symbol for some words (that come up often) then huffman encode those! We will spend more CPU to reconstruct but (suposudly) save more space. 
+ 
+The sender sends a dictionary of words (and their appropriate encoding) like {the:\; 0001,...}. For punctuation (and small minucha of 2 very simillar words we don't want to encode seperately) we may have to escape and drop to ascii for the small change and then back up. 
+
+#### Dictionary coding: issues with static approach
+
+The static approach may work for english, but not java. So Dynamically, both sender and recipient start with empty dicts and don't ship dictionaries, just ship ... **didn't catch that**. There's a lot of params to mess with: 
+
+1. what's the length limit on the words (we may encode a repeating sentence with a single eymbol)? 
+2. Dictionaries may get really large -- exhust RAM or become inefficient. We may have to dict dome stuff as symbols, but the rest as letters -- Where's the cutoff?
+
+#### Dictionary coding: dynamic apprach taken by gzip; sliding window scheme
+gzip and friends don't build a dict for all the inputs and instead use a *sliding window scheme*: 
+
+start      | window |<-here          end
+--------------------------------------   (the str)
+
+The window determines the dict! that is, given a word w, if it could be found, we give it's index in the window. Now we have a bound on the size of a window and the size of a w. w size = 64k (or whatever).
+
+gzip uses dictionary coding to generate symbols and frequencies which it huffman codes, all dynamically (zlib does about the same thing). 
+
+Property: *a single bit is flipped -- you're toast -- recipient will begin generating wrong dicts and your done for it*
