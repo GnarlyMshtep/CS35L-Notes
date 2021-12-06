@@ -1,3 +1,151 @@
+# Version Control and Backups at a large scope (not zooming on git)
+
+### The different needs of backups and Version control
+
+**Version control needs**: 
+- recoever from screwup -- fancy undo (undo something from last week, or a whole set of things, etc). 
+- explore history: answer the *why* questions. Why is it the way it (by it we mean a function or some piece of code) is? Why not another way? *An altarnative technology for comments.* 
+
+**Backup needs**: 
+- undo massive data changes 
+- Motivated by being able to respond to failure scenerios such as:
+- ussuly need to go to rough points back in time, not expecting the precision of git versioning. 
+
+    - you lose power
+    - flash drive fails (some or none is recoverable)
+    - user deletes/ trashes files by mistake 
+    - an outside attacker deletes/trashes files (ransomeware)
+    - *the hardest problem* inside attacker deleting or trashing files, that is, because he could trash your backups. We will not consider this. 
+
+How to know what failure to respond to? statistics: *Annularize failure rate (AFR)*
+Prob that drive fails in a year of uses (use quantification somewhat subjective) 
+The precentege is .2%-2.5% per year. 
+
+
+
+
+## Backups
+
+### What do we need to back up?: 
+- file contents 
+- filesystem data (things other than contents -- metadata (the stuff from `ls -l`))
+- `df -h` filesystem orginisation, includes things like paritions (how we divide data), mount points (where the filesystems apear to the users), options (read only --ro). System config information that is too low level to be in a reg ol' file. 
+- firmware (when you boot, the system does not run any code from a file, it runs "code" from hard-coded memory blocks), we may want to save that. 
+
+The first 2 are our focus 
+### Two general approaches: (1) block level
+You don't care what blocks are being used for, just back up blocks (of about fixed size) of memory. can optimize at the block level. 
+
+- Simpler to understand + implement 
+- Applicable to all fs.
+- misses out on a lot of optimisation chances
+
+### Two general approaches: (2) Filesystem level 
+We can backup more inteligently based on knowing how the filesystem works. For example, changed a file? can automatically change the timestamp. 
+
+- More likely to be efficient
+- specific to fs
+- more difficult to create. 
+
+#### What changes can we ignore when doing backups? (thinking of fs)
+- don't bother backing up unused data
+- don't backup caches and other reconstructable/preformence-oriented data. (speeds up backups, but slows down recovery). 
+
+
+#### When do you reclaim backup storage? 
+You backup every x time, what do you do when you run out of storage? The dumb strategy is to run them out linearly. The other is to sparse, such that you let's say keep: 
+    - 1/day for last 6 months
+    - 1/week for last 6 years
+    - ...
+
+#### How do you do backups (more) cheaply? (but everyting is a tradeoff)
+- simpleton: Do them less often.
+- Another idea is backing to a cheaper device (main is fast flash drive, the backup is older disk drive, mag tape (what google does now), optical). Can create a chain of cheaper and cheaper backups for less and less accessed (& important) stuff. 
+- Remote backups -- issues of privacy and trust. 
+- do them incrementlly: Only save the blocks which changed, or be even fancier and save only changes of files that changed (Save the deltas to files)
+    - *how do we express delta?* 
+        - in blocks: `[(index, newValue)]`
+        - for text file (filesystem level) backup you use an edit script. So like a file of a little language that can be ran to change the lines of a file (commands like append, delete, replace, etc... can be more complicated to optimise). Fancier scripting langugae = smaller backups , but less efficient reconstruction. 
+- Deduplication (at the block level): Look at all blocks in you system, some blocks will be very simillar or identical -- we don't need an individual backup for each! Now instead of just blocks, we have (block, [list of indexes of indentical data]). Can be combined with deltas to make it work even for simillar blocks. More subject to problems if the drive fails (has partial failures). In practiacal systems, there's a lower level system that prevents failures (like mirroring). Very common in high-end storage systems. 
+
+
+
+
+
+
+### Misc 
+
+#### How do you know your backups are working? 
+- unplug a random drive in the server room, that is, test them as realistically as possible. That's expensive. 
+- cheaper alternatives -- checksums. save checksums of the way the data used to be, then use checksums (hashs, approximately) that allows you to see if what you pulled is what you put in. 
+
+#### The most basic backups strategy: RAID-1 aka mirroring:
+Have 2 drives having the same data, probability both fail is tiny.
+- not cost affective. 
+- (relatively) Esay to implement.
+- Scales linearly with storage. 
+ 
+Note that the combined mirrored chance of failure $\neq{}(AFR)^2$ because the events are not independent. But it's also a passimastic estimate because you replace bad drives and don't wait all year. Operations person will make these calculations routinely.
+**GO BACK TO LECTURE THERE WAS SOME QUESTION ABOUT THE PROB OF FAILURE I DIDN'T HEAR I SHOULD KNOW BEFORE THE EXAM**
+- mirroring only helps with recovering this moments data. If the user deletes something, he will have deleted it from the disk and it will be recoverable again. 
+
+## Versioning (at the file level)
+- files can have versions, for exampele (not fr but could be) `ls -l --all-versions` (you will see file;19 -- saying that it's the 19'th verison) and so on until myfile;1. This direct approach is Rarely used nowdays because: 
+- how do we decide when to increment the file version? Every write? too much. We can't decide this on the OS level, instead, let the application control when a new version is created (it knows itself best). 
+- how to prune (what is prune?) older versions
+- some application will not work well with this system. Like a DatabaseManagemn=entSys which will get to slow 
+
+The OS level approach is used:
+- Snapshots: System decides, not applications, when to take a snapshot of every file in the system. (butfs, zfs, WAFL are examples)
+- in WAFL (seasnet) -- .snapshots sunbdirectory in every folder. Not perfect, to , let's say, 15min of work lost. can't delete snapchots. 
+- sounds slow, but itsn't because of *copy-on-write*.
+- a copy of the filesystem doesn't take very long becuase we just have the copy one write. 
+- that's what WAFL does and that's why it fast.
+
+### !copy-on-write (CoW)
+`$ cp --reflink=always a b` let b just point to a, and need only 1 copy of the file. That is, a and b point to the same inode. Once you modify file b, the sytsem will create a new block for b and then copy all the stuff from a + chnges to it. Like a smart point by reference. (lazy copying)
+
+### WAFL filesystem 
+*read up on this, highkey spaced out a d bit and it seems important and interesting*
+root points to everything reachable from the root in a tree structure. We differ the work the until we chnage and actually need to. The file system that we go to when we cs on wafl is a tree from another root. Not allowed to change any of the .snapshot tree.
+
+We can reclain all the blocks that are not always reachable. 
+
+
+### Software Version Control systems (assuming files work)
+some examples of things to "control": 
+- source code
+- test cases
+- documentation
+- sales blurbs
+
+(common) Limits for such systems are:
+- big binary blobs (such as vids or imgs). because their deltas are "weirdly patterned" that is, not simple text where you can tell the lines. One solution is https://github.com/microsoft/VFSForGit
+    - in practice, we often don't version those use version control for the stuff it works, then a list of names of blobs for the rest of the stuff wheer teh blobs are kepts elsewhere. 
+
+#### WHat do we want? in our Version Control system?
+- histories (can't keep snapshots indefinetly, in sw systems we want those systems to be indefinite). Histories contain metaadta as well as data. Metadata is about filesystem and about the history iteself (who made this commit?)
+- when file changed names, What to do about it? (Do you actually replace it and lose the fact that it's really the same file?). 
+- last 3 changes made are? (meta meta information)
+- atomic commits to multiple files -- change all or change none! More difficult than in fs because in fs we do atomic changes to single files.  
+- hooks -- *git doesn't do exactly what you want, often too permissive* restrict changes per project, get things to happen on certain actions. 
+- security (but we again don't talk about it) how do you know last commit was done by fellow teamate and not by attacker? Auth changes. 
+- format conversion (CRLF vs LF, for example). 
+- encodings (UTF-8 vs lesser encodings) -- want everyone to be able to work with the same encoding/their encoding 
+- navigation of complex histories (graphical tool or better)
+
+
+### history of version control 
+from (X -> Git (2002)). 
+
+git came out revolting against BitKeeeper (which was propriety code for Linux). Git said let's do the ideas of bitKeeper from scratch, but do it open source! Licensing was the big deal. 
+
+- SCCS Bell labs ~ 1975 (single file vc -- every file had it's own repository) -- the design choice from here that survived is that you can walk through the repository in a single walk and retrieve it any version that you would like. (delta backwards and forward). Can save less and, but O(size of rep to commit from repo)
+- RCS (file only) -- save later version O (latest version) for retrievel. **How efficient will it be to grab what I want?**
+- CVS (centrakl repositoy )
+- Subversion (no central repo)
+- Bitkeeper (let's do atomic commits and have no central repository)
+
 # Git 
 
 ### What does git do?
@@ -199,7 +347,9 @@ we have global and local git config files that add variables and all sort of req
 Hooks are certain scripts that git can run when certain actions take place. In `.git/hooks/` one can find all sorts of sample scripts. They are marked `something.sample`, where `.sample` tells git not to actually run the script. They can add all sorts of custom behivors for your script.   
 
 
-# C 
+
+
+# C, the languge, not it's compilation
 C is the lowest level software tools (programming language) that runs everywhere. Created by Ken Thompson and Dennis ritchie in the mid 70's at Bell labs. 
 
 ### What is C used for today? 
@@ -260,7 +410,7 @@ Run on the bare minimum, no OS is needed. C offers atomic acsess, usefull for th
 
 POSIX, is the OS std that ca
 
-# Compilation, particularly with gcc with respect to C
+# Compilation, particularly with gcc with respect to C (not optimisations, just the steps, protabillity, how it works)
 
 
 ##  Compilation in C (some GCC specifics)
@@ -317,7 +467,7 @@ ABI (OS specifications) is one of the things in the .md files, details on, for e
 
 
 
-## GCC compiler options and program optimization using compilers (both speed and security)
+# GCC compiler options + program optimization using compilers (both speed and security)
 selecting a different subset of flags changes the envieroment and may expose (or mask) bugs in your code. 
 
 ## Security/Correctness optimization using compiler
