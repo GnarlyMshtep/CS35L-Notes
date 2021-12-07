@@ -645,6 +645,7 @@ somwhat less efficient, but does checks
     (controversial)
 
 ### CheckType1: Static Checks
+**see more examples at the debugging chapter!**
 Static checks are the one's that the compiler does at compile time, they make your program more reliable. They are challenging for the compiler since it doesn't know what is the value of any variables and which specific execution path is taken (where an exhustive search is infiesable), so it will have to use heauristic. As such, it has the follwing up/downsides
 - `+` zero runtime cost 
 - `-` slow down compialtion 
@@ -667,6 +668,8 @@ static_assert(C) //in C++
 
 
 #### Non intrusive static checkking 
+**see more examples at the debugging chapter!**
+
 Are ones that you don't need to change your code for. 
 
 `gcc -Wall` -W is common, `-Wall` says turn on ALL (the warnings that the gcc guys though were useful enough often enough) the warnings. 
@@ -816,6 +819,7 @@ The compiler will assume p>n and optimize and our check for integer overflow wil
 
 
 # Encoding + Compression 
+
 Taking some data, preserving the same semantic information content but representing it with less charecters (bytes). Information Theory gives the rigourous limits/ideas behind this task, but we'll just focus on some practicallity. 
 
 When we compress data, we encode it in a more efficient way. 
@@ -871,3 +875,237 @@ The window determines the dict! that is, given a word w, if it could be found, w
 gzip uses dictionary coding to generate symbols and frequencies which it huffman codes, all dynamically (zlib does about the same thing). 
 
 Property: *a single bit is flipped -- you're toast -- recipient will begin generating wrong dicts and your done for it*
+
+# Methods to debugg (find bugs) but Avoid Debugging (with GDB or simmilar) 
+
+Debugging is an *extrememly inefficient process* that you should *avoid (almost) at all costs.* If you can come up with a practice the minimzes debugging over almost anything else, do it. If it's not possible to wholy eliminate, try to make bugs easier to find and fix, **make your program fail loudly and reliably**. 
+
+Can be seen as the prcess of finding the right $\delta{}$ of where you want to go from where you are (what can't be seen that way?)
+
+We focus on the buggiest platforms (C/C++) becouse knowing how to debug them implies we'll be able to debug most other things. 
+
+Note that the warnings we will present have no certainties, the probabilities they work are high and increasing with time as more edge cases are found, but never certain. Where these errors are helpful will be due to what you are developing and what for. It is common to include the warnings that are needed in the project standard (included with what comment style, what indents, etc). 
+
+**more information in the GCC Compiler options -- there's overlap**
+
+## Static Checking 
+Checking which occurs during compile time.
+
+Limitations and benefits: 
+- certain bugs only occur during runtime and it's not feesable to check the running of many (or any depending what the program does) input combinaitons.
+- pretty good about the bugs that can be elminited, can target whole classes of bugs. 
+- doesn't make your program slower at all
+- makes compilation slower
+
+### Nonintrusive (compiler options)
+- `gcc -Wall foo.c` turns on a lot of static checks, amongst many other things
+- `gcc -Wstrict-aliasing foo.c` warns of using ptrs for the wrong type. The issues that can arise are machine independent depending on types. 
+- `gcc -Wmaybe-uninitialized foo.c` warns when the compiler "cannot prove to it's on satisfaction that you set a variable before using it.` Not needed in other languges (like Python and Java where everyhting is initialized of the get-go, BUT, it's still useful because even though compiles -- it will probably output wrong. 
+- `gcc -Wtype-limits foo.c` -- not on by `Wall`. when u say something like (u<0) where u is an unsigned produces an error.
+- `gcc -fanalyzer foo.c` expends function from function call inside the first function to see if it can find errors that way. Makes gcc wayyyyy slower, but is able to catch bugs that you wouldn't be able to otherwise, see below:
+ 
+```c++
+int f(void){
+    int v;
+    g(&v); //gcc assumes g initalizes v, but it only uses heauristic and doesn't full check. With fanalyzer it will check that g actually intializes v, and else will err. 
+    return v; 
+}
+
+```
+
+### Intrusive (giving compiler advice)
+Annotating your program to indicate how it's meant to run and help the compiler catch errors.
+
+- function decoretors (standardized ussuly)
+```c++
+_Noreturn void abort(void){
+    //can help the compiler generate more efficient code -- (don't push return adress on the stack). Also, makes it complain about unreachable code. I mean, of course it's able to help more with extra info.
+}
+```
+- GCC function attributes (less standardized)
+```c++
+int hash(char const*) __attribute__((pure)) //looks at string contents derefrence form mem. 
+```
+This attr tells gcc that the return value depends only on the current state of the machine and that this function will not change the state of the machine. It's a pure function. It has no unobservable affects outside of it. 
+- `int square (int) __attribute__((const))` same as pure, but doesn't depends on outside storage (can't derefrence ptrs), just on input.
+- `int errprintf(char const * fint, ...);` Literally `...`, not being negligent. Add `__attribute__((format (printf,1,2)))` First is dec 2 all the other args. You are saying your function is declared on the same argument scheme as printf. [This is a somewhat between explanation](https://stackoverflow.com/questions/2735587/in-a-c-function-declaration-what-does-as-the-last-parameter-do)
+
+## Dynamic Checking 
+
+Check one execution. *Does not check all possible input cases.* Cannot entirely eliminate a class of bugs like static checking can. 
+
+Ops tools, not dev tools.
+
+Examples:
+- your first defualt, always, is to *debug with print statements!*
+- `ps` command, or even better 
+- `top` run ps every x sec (5 by defualt here) run your program and look at ps and top to see what mem, itme your program is taking. 
+- `time` Takes any program as an argument, tells you how much time the program took. Simple but helpful. 
+- `strace` runs your program in a special envieroment where you log all sys calls. 
+- `ltrace` traces calls to libraries (like Math.cos or stdio.printf). 
+- `  valgrind --leak-check=yes myprog arg1 arg2` like a debugger that you don't need to run into and runs and gives you errors automatically. I found very useful!
+
+*You often don't need to drop into the debugger, look at the logs we produce with above or you auto produce* 
+
+### Runtime checking enforced by the compiler
+All the options are here: [GCC page on runtime checks](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html)
+
+- `gcc -fantasize=address` Make sure that your buggy program *crashes mroe reliably* bad ptrs make ur program flaky -- sometime fails and sometime does not. We want to fail, and fail loudly! 
+    - More precise then valgrind since valgrind runs on already compiled executable, but gcc has access to src!  
+    - more code generation for this. (then recompile for full speed, which sometimes is a big deal).
+    - valgrind was there first 
+    - you run whatever gets compiled form this and it'll fail louder
+- `gcc -fsanatize=undefined` catch undefined behivor by the c standard. CLassic is signed integer overflow. (ex: for loop that starts with intmax and goes ++)
+- `gcc -fsanitize=leak` mem leaks, as it sounds. 
+- `gcc -fsanitize=thread` Threads step on each other. Tries to catch race condition bugs (a shared variable between threads is watched closely). One of the toughest bugs to reproduce and find. Make buggy condition crash right away 
+
+*The goal of all of these things is to **crash realiably***. 
+
+
+### Change your codebase -- choose platform wisely
+- If your technology (language) crashes your program often (C++ is crashing) pick a good (safer) technology. For example, change to python! (or something)
+
+### Change your codebase -- Defensive Programming
+write code that assume that the other modules don't work. That is, call a function and expect a result -- check that you got that result (even when it's in the specs and you know the person who/ you wrote the function). For example:
+
+- Keep traces and logs (figure out what ur program did).
+- checkpoint restart (at a certain point, your program saves its entire state to permenent memory) Then your program can be recovered from that state (or observed to see if err occured before or after or help to see if anything failed)
+- assertions `assert({cond})` by `#include assert.h`. -- runtime check that condition, else crash -- fail loudly. 
+    - There's a `gcc -DNDEBUG` to compile without asserts, which allows us to not have them and suffer from their efficiency decrease. 
+- exception handling
+- *barricades*: you seperate your software to internals and externals (internal is ussuly the most of it, externals is ussuly like the input from a user or some place that is very unverified). The code between the external and the internal is a baricade and must untaint the external data.
+    - tainting: a variable/obj that isn't trusted. Something about it could messed up formatting-wise. You have runtime check to make sure you don't pass tainted obj into the internals
+- interpeters: execute forgein programs that need to be executed inside a jailors.
+    - webrowsers use this approach to run JS. 
+    - can be and is done in larger applications
+- virtual machines: an interprter for machine code that is very efficient. Often the same arch as you are running. Jailors at the hardware level often useuful as well to prevent crashing. 
+
+
+## Aside: error fault failure, programmer terminology 
+- error: mistake in the programmer's head
+- fault: a possible way that something can go bad, but it hasn't happened yet.
+- failure: an observable mismatch between the behivor of the program and desire of users/spec
+
+Imply from bottom to top (a failure is resulted by an error and a fault, an error may not imply there is a fault or a failure, etc). We want to minimize failures and do it by reduceing faults and errors ahead of time
+
+# GDB and debugging with GDB
+Sometimes it's inevitable and we must debug, and we do, it's important to identify the failure, stabalize it (crash realiably!) by finding a test case that reproduces the bug consistently (which could be hard, with all sorts of mem errs, for example).
+
+## The GDB debugger
+WHen your program is debugged with GDB, it runs in its own process (like usual), but another process running GDB is actually "in charge" (the OS notifies it if something interesting/stoppage/unusual happens). GDB can modify the state of your program and process of the program in almost anyway it wants (as we'll see). This gives *GDB lots of power*, which is why mac OS turned off some of the commands which it uses to debug -- attacker often use GDB to mess with your system.   
+
+A plus is don't need to change program at! you don't even need to be the one who compiled the progream!  Yet, GDB works best (most informative) if you *compile with debugging symbols*, that is `gcc -g foo.c`. It doesn't change the executable, but bloats foo.o with debugging info (such as: the names (u gave to) local variables).
+
+optimizations such as `-0N` make your code less compilable because the optimizations make your executable far less predictable and corrosponding directly to code. It may look as if the program counter is moving around errtically in the src code since optimisation change order of actions for some minute machine code optimisations. *Beginner suggestions: use `-o0`, then debugging will be easier.*
+
+### (many many many) GDB commands
+More here: [GDB commnds](https://web.eecs.umich.edu/~sugih/pointers/summary.html)
+
+*mostly get execution info:*
+
+- `gcc -g -o memsim memsim.c` prepere your program for debugging by compiling with debugging symbols
+- `gdb` to start gdb and get the `(gdb)` prompt, then `(gdb) file executableName` to start debuggign this executable
+- `(gdb) run a b >/tmp/out `
+- `(gdb) ^C` -- regain control 
+- `(gdb) bt` -- get backtrace 
+- `(gdb) up` (turn gdb's attention one level up in the backtrace)
+- `(gdb) p EXPR` -- evaluate the expression and print result (can compute variable value)
+    - p exit(100) -- this will just exit -- this a powerdul expression. 
+    - executing code in the debugged program
+    - how implemented? GDB compiles some machine code, put it in mem inside debug process, and then (change the instruction pointer) tells computer continue executing 
+    - legitemately modifies the running program.
+
+
+*mostly simple navigate through program flow:*
+
+- `(gdb) stepi` (steps over a single machine instrucitons)
+- `(gdb) step s` (single steps through the src code) -- through machine until it find src line number is changed
+- `(gdb) next n` (single step through the current function, within a funciton, skip through all of of other funciton call as if it were a single instruciton, let it go and then return as a single line of f, the step would step you in g) helps you *operate within an appropriate level of abstraction when debugging*
+- `fin` (finish execution of f) 
+- `(gdb) rc` (reverse continue), let's let the program run backwards until we reach the most recent break points. Avalabile on some platforms and on request.  
+    - not done by running backwards in hw, but it's done in software. 
+    - It does it by recording the execution history and stepping back on the execution history (like in this step we changed x to 5, etc.. must maintain the history of the program to do that, which is expensic )
+    - slows things done when you request
+- `(gdb) checkpoint` (saves entire state and gives you id)
+    - cheaper version of rc that you can use to return wherever you'd liek 
+- `(gdb) restart checkpointID` (fo back to ID printed by checkpint)
+
+*even more commands*
+
+- `(gdb) set cwd /etc` set the cwd
+- `(gdb) set env PATH /usr/bin:/bin` set some env variable
+- `(gdb) set disable-randomization yes/no` (normally, libraries and objects get put into different places as a security meassure, making it harder for atteckers) turning it off makes it easier to debug. This returns to our point from last lectures of reliable crushing (more realiable crushing when the program is the same). This also connects to *reproducubality* make the same output at the same time. Make debuggers such that psuedorandom gens give the same answers. This is by defualt on (as in randomization off_! **This is an example of how debugging your program changes it's behivor.** (what are some other examples)
+- `(gdb) attach PID` We say this when we want to debug a running program (such as a running emacs we would likee to debug). 
+    - security implications: When attacker breaks in they can run a process as you and run GDB on it. if you break into one program you break into them all. 
+    - ubantu (and others) doesn't let you do that anymore. 
+    - need to somehow overwrite system security to fully debug/proc/sys/kernal/... 
+    - **security vs debuggability** be cautious! 
+    - complete control over program's brain 
+- `(gdb) detach` (running on it's own + whatever changes we made to it)
+- `(gdb) b read_key_sequence` (putts a breakpint at a functionNAme/ lineNumber)... GDB modifies your program by putting a function at that place to stop and give control back to gdb 
+- `(gdb) c` (for continue, emacs continues to run) 
+- `(gdb) info breaks` (all the break you have currently set in your program)
+- `(gdb) watch EXPR` keep checking the valur of this experssion, and if it changes, stopp. Break point for data instead of program.
+    - as it sounnds, we have a one big issue: efficiency. How can it do it without single stepping and calling the expression every time. 
+    - it turns out that for single variables there is hardware suppurt for watching (like) 4 mem location up until change. 
+    - EX: watch (0<=i && i<1000) (print i first tho, to make sure that it's in range).
+
+### Aside: GDB outside cntrol 
+- API for controlling GDB 
+- GDB has it's own macro language that you can use to write little GDB programs you can use to execute a bunch of commands you often do. 
+- Write GDB commands in Python!
+
+Very programabble! 
+
+many years of debugging, many common things you will want to do debugging 
+
+### Aside: Why debug w/o src? 
+- screwups -- you lost the src 
+- bankruptcy -- lose src, or lose compiler. 
+- reverse engineer code by competitor 
+- forensics -- try to debug program an attacker is making hard to debug. Prof. Sahai: provable program obfuscation 
+
+# Building programs and checking for portability 
+Introduced in the context of needed to build and then debug
+
+The tools that emacs requires to build (several levels of make)
+- *automake*: you specify makefile templates, Makefile.am (which is the file that the dev writes by hand). We need to prepere to use make. Automake generates Makefile.in 
+- *autoconf*: Makefile.in is ran by autoconf to make Makefile (which is platform dependent)
+- *configure*: automatically generated super long shell script. 
+
+What are the audiences for these different build tools? 
+- the devs: assumed to have git, automake, etc, all debugging tools) -- superset of everyone's tools. Generate portable files. 
+- builders: Simpler set, the shell, gcc, make, ... Generate executables that are platform dependence. 
+- packagers: take the output of the builders and will generate packets ready for installation. Generate something like emacs-29.3.deb, which you can install on ubantu. 
+- insatllers: ussuly ops people.
+- testers: std is to run `make check -j5` -j5 to keep running cpu and not wait for IO. It's common for packages to have built in tests
+
+Not uncommon for large projects to have the src for the file that the use to build their project, and to generate more software to help them build. 
+
+### Why several levels of makefile? 
+In one word: standardisation. There's a POXIX spec for `make` (pretty basic since it's teh intersection of all the makes out there). Doesn't have many necessery features -- not enough for ease of development. 
+
+Solution: a boostraping process, a few level of abstraction that make it more convinient, giving you more features. 
+
+a developer should be able to write src files that are incredibely portable all around. The price of that is the cumbersome build process.  
+
+### Emacs build phases
+- `./autogen.sh` (checks build tools, runs automake, etc) (DONE BY A DEVELOPER)
+- `./configure`  (cehcks platform, allows you all sorts of configuration) (BUILDER ussuly deals with). Generates makefile and a config.h 
+- `make -j` build emacs executable
+- `make install`. Don't have root? use --prefix=$HOME/prefix (or any other spot that is yours and is not the general home )
+
+### Aside: portabillity checking
+For example, our application must run on many browsers and many servers. You can put your foot down and say (I only do this!) but people prefer portability (PPP). 
+
+How do I check that my application is compatible with different {versions of node, browser, etc}. This obvious solution is inefficient since overall is: numBrowser*numNodeVersions. That's a lot for a 2 component application! (where there ussuly are many). Grows about exponentially with number of components. Too many things to test exhustively. 
+
+Even low level apps have portabillity issues (32 vs 64 bit, x86-64 vs AARCH64)
+
+Some techniques are random sample
+- random sample
+- bother testing only the best versions
+- compatabillity guides
+- automation tools
+- many examples in webdev
+
