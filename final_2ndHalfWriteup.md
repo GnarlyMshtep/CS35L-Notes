@@ -152,16 +152,15 @@ git came out revolting against BitKeeeper (which was propriety code for Linux). 
 - keep track of your projects history (that is, all your previous commits)
 - keep track of your projects future (that is, the staging area and the work you are currently doing and will be commited). Eggert claims this is equally important. 
 
-### The git workflow + fomat commits
+## The git general workflow
 1. Edit your file -- changing working files, git doesn;t know or care about them, you don't like? always refert with `git checkout -f` throws away what is now, esser version of reset.
 2. `git add FILE1 FILE2` files you want to commit in the following commits. Puts the contents of these files in your future (*staging area*), can keep editing.
 3. `git commit` put into the repo as fresh commit, You will be prompted for commit message. 
 
-Suggested format for commit message: Single line summery of the change, 50 chars is nice. next line empty. Further explanation motivation. In large projects, commits are marketing tools meant to convince other users to pick up the change.  
+### Suggested format for commit message
+Single line summery of the change, 50 chars is nice. next line empty. Further explanation motivation. In large projects, commits are marketing tools meant to convince other users to pick up the change.  
 
-## What are some git commands? 
-
-### From lesson 1, general workflow
+### General workflow commands, lesson 1 (not lower level/ branching commands)
 1. `git init` create a new empty git repository. Don't use a lot, because you do this when you started a completely new project (it's more often to work on project at work).
 2. Examine the status of the src code. `git log` 
     
@@ -195,6 +194,20 @@ Suggested format for commit message: Single line summery of the change, 50 chars
 - `grep git ls-files` is so common that git has `git grep REGX_PATTERN`                          
 7. `git add FILE` or `git add -A`
 
+### Stashing 
+Use git stash when you want to record the current state of the working directory and the index, but want to go back to a clean working directory. The command saves your local modifications away and reverts the working directory to match the HEAD commit.
+
+Example use:
+```
+git stash # To add changes to stash stack
+git stash list # Shows list of stashed changes
+git stash apply stash@{0} # Retrieve stash
+git stash clear # Clear stash list
+```
+
+can git stash list if you have multiple stashes -- else u apply more recent one's
+
+
 
 ## Branches, merging, patches
 As we discuss all these concepts history-formatting concept, keep in mind *the philosophical tension between keeping a clean and beutifull history vs keeping a realistic history*. A realistic history may bring to a better undertanding, but looks kinda bad, is messy, ugly, hard to see main pints. Buetifull history may not relect what really happen, which is issue when your trying to figure out why things are the way they are right now. 
@@ -208,6 +221,7 @@ Eggert's advice is to not be too extreme either way.
 - lightweight in the form that all all the commits are in the tree, the branch is just a pointer to a spot in the tree, which can be found at `.git/refs/heads. In the heads folder, the heads are just (nested) files which contain only the commit id. They are dirt-cheap! make as many as you'd like!
 - when you are on a branch, git remembers you are on branch, and when you commit, it adds the new commit to the tree and moves the branch pointer to point to the new commit.
 - The *detached HEAD* state means that your branch has no name, which you likely don't want to. If you commit while detached (which is not reccomended), you will grow the tree, it commits to where you are and it would commit regularly, but you would only be able to return to that location by remembering the commit id and `git checkout`ing it later (think about it, how else will you (esaly) find a commit somewhere in the tree that isn't the ancestor of any branch heads?).
+
 ### What motivates people to branch? 
 1. maintain old releases
 2. Conservative AND radical options for users and developers to work with
@@ -304,50 +318,18 @@ Rebasing -- want to merge but without the hustle.
 Started new branch but people kept working upstream. Could merge myBranch and main, but also can `git rebase main`  
 - appplies all the delats from our branch to the leaf of the main branch. Works only for sufficinetly small branches or it may be too much of a mess. 
 - *plays into the conflict between buetifull and realistic history*. 
+- use `git rebase -i` (interactively) `BRANCH` (programming at a different level -- editing our history)
+- `git commit -amends` (replaces the most recent commit with this new commit (with new message)). 
+- Rebasing works best when a few changes on ur private copy
+- a use case could be: you work on a copy of the repository localy, make some cahnges, but meanwhile upstream has changed. But you worked on a diffrent sector and made small changes that are not very related with the ones done upstream and like buetifull history -- so you you rebase your changes to upstream.  
+### Remotes (remote repositories / upstream)
+You are developing a program with a lot of other people where you guys are all talking to the same remote repositories. 
 
-## Misc 
+`git remote` -- what your remote is, the most common name is origin. You usully get a remote by cloning the reposity from upsream. `-v` flag talls you where the fetch and the push in particular come from. 
 
-### .gitignore
-In the main repository there's a file called .gitignore telling git which files should it not track. There's also a gitignore in the .git/ folder, which allows you to ignore things just for you, not for the project (since that gitignore file is not tracked). 
+Can have more remotes for sub-working groups. 
 
-#### The .gitignore little language
-Set of patterns telling git which files should be ignored. For example: 
-    
-    *.o -- ignore .o files.
-    a.out 
-    /node-modules
-
-simillar to shell pattern matching, but not exactly. For example 
-- `*` globbing pattern, shell style 
-- if start with `/`, anchor to the current working directory. 
-- *.o matches all something.o in any folder strting at the current working directory
-- `!abc.o` don't ignore this, priority to whatever is first. 
-- everything relative to where the .gitignore file is at. 
-
-#### What and why to ignore? 
-Opinions are split!
-
-Some of our software components should not be in the git repository. That is, because they are 
-- secret 
-- utilities that we are not changeing, 
-- compilations of the src. (or anything generatable from something else), perhaps unless they are small and take a lot of time to regeneate 
-- Should avoifing putting machine dependent things on repository  
-
-The idea (in general) is to only have src you are working on, and be minimalistic. For example, `.o` should not be included. 
-
-
-
-
-
-
-### .gitconfig
-we have global and local git config files that add variables and all sort of requirements. 
-
-### Hooks
-Hooks are certain scripts that git can run when certain actions take place. In `.git/hooks/` one can find all sorts of sample scripts. They are marked `something.sample`, where `.sample` tells git not to actually run the script. They can add all sorts of custom behivors for your script.   
-
-
-
+`git fetch` updates a branch in the local repository to match the remote. 
 ## git internals
 Git plumbing vs porcelin (low vs high level), we want to build high level ontop of the low-level and understanding it helps. 
 
@@ -409,15 +391,122 @@ The big gurrila of git. A bunch of subdirectories with /`dig``dig` to give it be
 #### packed-refs
 an optimization of refs -- the tips of all the branches and tags. 
 
-##### What's in these objects? 
-We have been seeing POSIX filesystem so far. tree of files and directories. Make a tree for each edit is one design that is bad. Wer'e building a different kinda filesystem ontop of POSIX that is optimized for version control. The git objects system is implemented atop POSIX but not in a direct 1:1 (a single src does not go into a single object file). Still - we reuse/adapt many ideas. 
+### Git's Objects + Comparison git fs with POSIX fs
+We have been seeing POSIX filesystem so far and git's fs is sort of analougus. Tree play the roles of directory, those trees contain (refrences to) blobs which play the role of files. Why not just yuse POSIX? There are under-the-hood optimisations for version control. Still many ideas are reused and adapted  
 
-Types of objects: blobs(reg file) tree(dir) commits(symlink). Tree maps names to objects. Premission over here as well. Difference: You can change file contents, but in git you cannot change file contents -- they are all immutable -- you are tryna record history -- it shouldn't be allowed to change. (a lot of optimisations accesible) 
+Types of objects: blobs(reg file) tree(dir) commits(symlink + metadata). Premission over here as well. Difference: You can change file contents, but in git you cannot change file contents -- they are all immutable -- you are tryna record history -- it shouldn't be allowed to change. (a lot of optimisations accesible) 
 
-### Aside: building from a git clone
-As we discuss, we try to keep a minimal file content (only nogenrable src), where minimal satisfies maintence. There's that whole tradeoff. 
+#### ObjType1: Blob 
+Just a bytestring -- git doesn't care what's in their. Just ordianry information. 
 
-Autogen.sh (bootstrap a process). 
+#### ObjType2: Tree 
+Branch node of a tree of objects. Roughly corrosponds to a directory, maps names to objects. *Could actually be any graph, not only tree*, but he didn't explain much. 
+Contents: 
+There's a tree for each commit -- a commit is an important tree. 
+
+Mode, Type, ShaID, name_in_this_tree (Type is cached in the tree for preformence reasons. )
+```
+100644 blob fa5296614a8b937aae62d469c2abdb697021cbc5    LICENSE
+100644 blob 7e9da7436d431e73911a16fd2b26c7ba9d16b089    README.md
+100644 blob 84a04be2229c4e4517b2b26bff4d8fc6937ac1a2    discussion0 -- notes.txt
+100644 blob ea81e6669ab9ecc1974ffcb500fa5ad27d8b591b    discussion2_10_8_21.md
+100644 blob 7fa4a1fcfa1db15a9c0b69a9853d700ff8ca88d6    discussion3_10_15_21.md
+100644 blob d215fb4d7d074cd5596ac101097a4f79b9fba6cf    discussion_#_11_5_21.md
+100644 blob cdd908ddd2d678b76a9da73bd5da42151db2b4c8    discussion_1_10_1_21.md
+..........................................................................
+```
+
+#### ObjType3: Commit
+representative of a state of a software development repository. Has parents (typically one). Has a justification -- *answer the WHY questions*. Supposed to give you meta information that isn't in the comments. Motivation for the tree. 
+
+#### Compare and contrast POSIX and git fs
+- commits which are analogous to symlinks have much more information, and as a whole, the git fs allows for much more documentation. 
+- directories are much like folders, blobs are much like files
+- in git everything comes with a hash value to retrieve it since it is a "is a content-addressable filesystem."
+- git objects are compressed by defualt to save space. 
+
+
+### Some Plumbing commands: 
+1. `git-hash-object`: hash what's passed. 
+    - use --stdin to read it from stdin 
+    - use -w to actually write it to the git objects -- can use to create new obj in database. 
+    - doesn't care about what's the filename or anything just the content 
+    - smart enough to not store 2 copies of the same data in the database (prob using above)
+
+2. `git-cat-file`: output an object by it's hash 
+    - -t to print type
+    - -p to print the contents 
+    - git-cat-file hashOrTagName^{tree} -- prints out the tree at that commit (ex above at tree, use tag main) 
+    - swiss army knife for exploring git contents. 
+3. (create a tree) `git update-index --add --cacheinfo "100644 (mode, readwrite to me, read for anyone else) ,hashashash, filename"`. Then, do a `git-write-tree`
+    - Updates you plan for the future (stage stuff). 
+    - Built a tree, but it's not mega useful since it's not an important tree like a commit. 
+
+4. `git commit-tree hashOfTree` (then write commit message until you write C-d) 
+    - suggestibally, commits should have a nice short line, then a blank line, then, more info)
+
+## Misc 
+
+### .gitignore
+In the main repository there's a file called .gitignore telling git which files should it not track. There's also a gitignore in the .git/ folder, which allows you to ignore things just for you, not for the project (since that gitignore file is not tracked). 
+
+#### The .gitignore little language
+Set of patterns telling git which files should be ignored. For example: 
+    
+    *.o -- ignore .o files.
+    a.out 
+    /node-modules
+
+simillar to shell pattern matching, but not exactly. For example 
+- `*` globbing pattern, shell style 
+- if start with `/`, anchor to the current working directory. 
+- *.o matches all something.o in any folder strting at the current working directory
+- `!abc.o` don't ignore this, priority to whatever is first. 
+- everything relative to where the .gitignore file is at. 
+
+#### What and why to ignore? 
+Opinions are split!
+
+Some of our software components should not be in the git repository. That is, because they are 
+- secret 
+- utilities that we are not changeing, 
+- compilations of the src. (or anything generatable from something else), perhaps unless they are small and take a lot of time to regeneate 
+- Should avoifing putting machine dependent things on repository  
+
+The idea (in general) is to only have src you are working on, and be minimalistic. For example, `.o` should not be included. 
+
+
+### Git bisect 
+you have a linear (or maybe doesn't have to be linear, possibly does not) change of commits and a bug is introduced somewhere along the way. We have a script that returns with status 0 on success. We can binary search through the linear chain to find the commit that broke the sytem. Assumes we have [nonbuggy]|[buggy] split in the history. This is not always true, but running bisect may give us some emore useful intel
+
+ex use: 
+
+```bash
+git bisect start FROM_COMMIT TO_COMMIT
+git bisect run sh -c make && ./testScript # it will take a while possibly because of make, but yep this will works. 
+```
+can `git skip COMMIT_ID` if you skip commit that may not give us solution.
+
+we can also run without a script and tell ourself if something is good or bad (git will binary search through)
+
+Ex of no script run:
+```bash
+$ git bisect start
+$ git bisect bad                 # Current version is bad
+$ git bisect good v2.6.13-rc2    # v2.6.13-rc2 is known to be good
+```
+
+*how to do for more complex history*: 
+(it works but the inner algo get more complex) -- prob works but he doesn't know
+
+
+### .gitconfig
+we have global and local git config files that add variables and all sort of requirements. 
+
+### Hooks (also in intrenals folder contents)
+Hooks are certain scripts that git can run when certain actions take place. In `.git/hooks/` one can find all sorts of sample scripts. They are marked `something.sample`, where `.sample` tells git not to actually run the script. They can add all sorts of custom behivors for your script.   
+
+
 
 # C, the languge, not it's compilation
 C is the lowest level software tools (programming language) that runs everywhere. Created by Ken Thompson and Dennis ritchie in the mid 70's at Bell labs. 

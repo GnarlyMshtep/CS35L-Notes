@@ -7,3 +7,5 @@
 7. lecture 13 question about probability of failure -- ask on piazza
 8. WAFL fs
 9. dynamic dictionary encoding 
+10. print all hws
+11. trees in git 
