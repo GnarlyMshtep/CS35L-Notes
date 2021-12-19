@@ -1,4 +1,2 @@
 # CS35L-Notes
-Messy Notes from CS35L. I'll Compile them to something readable before the Exams!
-
-- midterm copilation out, final soon.
+Notes from all CS35L lectrues (+ some key discussions) throughout Fall 2021. Writeups were compiled to grand notes previous to the midterm and the final.
